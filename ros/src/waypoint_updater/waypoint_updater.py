@@ -85,9 +85,14 @@ class WaypointUpdater(object):
         return nearest_wp_idx
 
     def publish_trajectory(self, idx):
+        '''
+        Publishes the LOOKAHEAD_WPS trajectory points of the base_waypoints to the final_waypoint topic.
+        If the end of the base_waypoints are reached, the published trajectory gets shorter until there is
+        no trajectory point left.
+        '''
         lane = Lane()
-        lane.header  = self.all_waypoints.header
-        lane.waypoints = self.all_waypoints.waypoints[idx:idx+LOOKAHEAD_WPS]    # what happens if idx becomes to large? will is start from the beginning on again?
+        lane.header = self.all_waypoints.header
+        lane.waypoints = self.all_waypoints.waypoints[idx:idx+LOOKAHEAD_WPS]
         self.final_waypoints_pub.publish(lane)
 
     def pose_cb(self, msg):
@@ -101,7 +106,8 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         '''
         Callback for the base way points, which are provided once after startup (To be verified!).
-        The waypoints contain pose and twist, however, we need the pose only.
+        The waypoints contain pose and twist, however, we need the pose only. x and y coordinates 
+        of the trajectory is maintained in a KDTree to enable a quick access. 
         '''
         self.all_waypoints = waypoints
         self.waypoint_xy = list()
