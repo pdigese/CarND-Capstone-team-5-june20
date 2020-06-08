@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from scipy.spatial import KDTree
+import numpy as np
 
 import math
 
@@ -27,6 +28,9 @@ LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this n
 
 class WaypointUpdater(object):
     def __init__(self):
+        self.waypoint_tree = None
+        self.pose = None
+
         rospy.init_node('waypoint_updater')
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
@@ -51,8 +55,9 @@ class WaypointUpdater(object):
         rate = rospy.Rate(30)
         while not rospy.is_shutdown():
             # ENDLESS LOOP
-            wp_idx = self.get_closest_waypoint_idx()
-            self.publish_trajectory(wp_idx)
+            if self.waypoint_tree and self.pose:
+                wp_idx = self.get_closest_waypoint_idx()
+                self.publish_trajectory(wp_idx)
             # "END" OF ENDLESS LOOP, wait the remaining time
             rate.sleep()
         pass
@@ -70,13 +75,13 @@ class WaypointUpdater(object):
         ],1)[1]
         closest_pt = np.array(self.waypoint_xy[nearest_wp_idx])
         prev_pt = np.array(self.waypoint_xy[nearest_wp_idx-1]) # any chance of idx out of range?
-        curr_pt = np.array(self.pose.pose.position.x, self.pose.pose.position.y)
+        curr_pt = np.array([self.pose.pose.position.x, self.pose.pose.position.y])
         val = np.dot(closest_pt - prev_pt, curr_pt - closest_pt)
         '''
         TODO: Find your own approach to identify the closest point...
         '''
         if val > 0:
-            nearest_wp_idx = (nearest_wp_idx + 1) % len(nearest_wp_idx)
+            nearest_wp_idx = (nearest_wp_idx + 1) % len(self.waypoint_xy)
         return nearest_wp_idx
 
     def publish_trajectory(self, idx):
@@ -89,6 +94,8 @@ class WaypointUpdater(object):
         '''
         Stores the current pose of the car in this instance
         '''
+        if not self.pose:
+            rospy.loginfo("Received first pose...")
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
@@ -102,7 +109,7 @@ class WaypointUpdater(object):
             for waypoint in waypoints.waypoints:
                 self.waypoint_xy.append((waypoint.pose.pose.position.x, waypoint.pose.pose.position.y))
             self.waypoint_tree = KDTree(self.waypoint_xy)
-            rospy.loginfo("All waypoints received!")
+            rospy.loginfo("All waypoints received...")
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Shall be implemented once the tl detection works
