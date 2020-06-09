@@ -11,7 +11,7 @@ from twist_controller import Controller
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
 
-You will subscribe to `/twist_cmd` message which provides the proposed lin and anf velocities.
+You will subscribe to `/twist_cmd` message which provides the proposed linear and angular velocities.
 You can subscribe to any other message that you find important or refer to the document for list
 of messages subscribed to by the reference implementation of this node.
 

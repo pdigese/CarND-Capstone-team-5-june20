@@ -1,5 +1,8 @@
 from pid import PID
 from yaw_controller import YawController
+from lowpass import LowPassFilter
+import math
+import rospy # only for logging
 
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
@@ -22,19 +25,32 @@ class Controller(object):
         self.vehicle_mass = vehicle_mass
         self.wheel_radius = wheel_radius
 
+        f_sample = 50. # Hz sample frequency
+        f_cutoff = 5. # Hz low pass first order
+        self.lpf = LowPassFilter(tau=1./(2.*math.pi*f_cutoff), ts=1/f_sample)
+
     def control(self, lin_velocity_x, ang_velocity_z, curr_lin_velocity_x, curr_ang_velocity_z, dbw_enabled, t_now):
         '''
         TODO: Description of the input parameter
         lin_velocity_x:
         ...
-        curr_time: uint32 nsec, uint32 sec (should be much more precise than float sec, let's hope there is some arhithmetic provided)
+        t_now: float, might suffer from low accuracy
         '''
         throttle = 0.       # range 0...1 (no acc to may acceleration)
         brake = 0.          # brake force in Nm, higher value => stronger braking (only positive range)
         steer = 0.          # TODO: most likely in radian (rule: si-units everywhere...)
         max_brake_force = 400. # Nm
 
+        # there is some jitter in the measured velocity, therefore it needs to be filtered.
+        # TODO: We introduce here an additional phase delay, would this make the pid controller somehow unstable?
+        curr_lin_velocity_x = self.lpf.filt(curr_lin_velocity_x)
+
         steer = self.lat_ctrl.get_steering(lin_velocity_x, ang_velocity_z, curr_lin_velocity_x)
+
+        rospy.loginfo("Linear Velocity: {}".format(lin_velocity_x))
+        rospy.loginfo("Angular Velocity: {}".format(ang_velocity_z))
+        rospy.loginfo("Current Linear Velocity: {}".format(curr_lin_velocity_x))
+        rospy.loginfo("Current Angular Velocity: {}".format(steer))
 
         if self.t_past is not None:
             t_d = t_now - self.t_past
