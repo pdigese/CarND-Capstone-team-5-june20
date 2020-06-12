@@ -104,11 +104,11 @@ class WaypointUpdater(object):
         else:
             lane.waypoints = self.decelerate_waypoints(base_waypoints, idx)
 
-        rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
-            lane.waypoints[12].twist.twist.linear.x,
-            lane.waypoints[24].twist.twist.linear.x,
-            lane.waypoints[36].twist.twist.linear.x,
-            lane.waypoints[48].twist.twist.linear.x))
+        #rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
+        #    lane.waypoints[12].twist.twist.linear.x,
+        #    lane.waypoints[24].twist.twist.linear.x,
+        #    lane.waypoints[36].twist.twist.linear.x,
+        #    lane.waypoints[48].twist.twist.linear.x))
 
         self.final_waypoints_pub.publish(lane)
 
