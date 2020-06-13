@@ -24,8 +24,8 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 80 # Number of waypoints we will publish. You can change this number
-LOOKAHEAD_WPS_FOR_DECELERATION = 80
+LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS_FOR_DECELERATION = 50
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -105,10 +105,10 @@ class WaypointUpdater(object):
             # do the deceleration...
             lane.waypoints = self.decelerate_waypoints(base_waypoints, idx)
             rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
-                lane.waypoints[20].twist.twist.linear.x,
-                lane.waypoints[40].twist.twist.linear.x,
-                lane.waypoints[60].twist.twist.linear.x,
-                lane.waypoints[79].twist.twist.linear.x))
+                lane.waypoints[12].twist.twist.linear.x,
+                lane.waypoints[24].twist.twist.linear.x,
+                lane.waypoints[36].twist.twist.linear.x,
+                lane.waypoints[49].twist.twist.linear.x))
 
         self.final_waypoints_pub.publish(lane)
 
@@ -120,7 +120,7 @@ class WaypointUpdater(object):
             p = Waypoint()
             p.pose = wp.pose
 
-            stop_idx = max(self.latest_stop_line_idx - closest_wp, 0)
+            stop_idx = max(self.latest_stop_line_idx - closest_wp - 2, 0)
             dist = self.distance(base_wp, i, stop_idx)
             '''
             Note: Dist is approx 64 (m?) if the stopline is 100 trajectory points away
@@ -129,12 +129,12 @@ class WaypointUpdater(object):
             At 0 m (actually before!) the car needs to stop.
             Car travels at 11.1 (m/s)
             '''
-            vel = abs((dist-3.)*11.1/52.0) # remove one meter from the actual distance to make the car stop earlier
+            vel = abs((dist)*11.1/32.0) # remove one meter from the actual distance to make the car stop earlier
             #rospy.logerr("{:1.1f}".format(vel))
 
             #if dist > dist_of_car_log:
             #    dist_of_car_log = dist
-            if vel < 1.0:
+            if vel < 0.2:
                 vel = 0.
             p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
             #rospy.logerr("{:1.1f}".format(p.twist.twist.linear.x))
