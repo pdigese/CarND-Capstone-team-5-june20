@@ -9,6 +9,7 @@ ONE_MPH = 0.44704
 
 
 class Controller(object):
+
     def __init__(self, min_speed, max_speed, wheel_base, steer_ratio, max_lat_accel, max_steer_angle, max_lon_decel, vehicle_mass, wheel_radius):    
         # FIXME: Find fitting parametrization for the longitudinal controller
         self.lon_ctrl = PID(kp = 0.5, 
@@ -17,7 +18,7 @@ class Controller(object):
             mn=-1., # max throttle and not max speed
             mx=1.) # min throttle and not min speed
         self.lat_ctrl = YawController(wheel_base=wheel_base, 
-            steer_ratio=steer_ratio, 
+            steer_ratio=steer_ratio,
             min_speed=min_speed,
             max_lat_accel=max_lat_accel,
             max_steer_angle=max_steer_angle)
@@ -54,19 +55,19 @@ class Controller(object):
 
         if dbw_enabled is True and t_d is not None:
             # t delta between the last and current sample is required in order to integrate / differentiate properly
-            vel_err = lin_velocity_x-curr_lin_velocity_x
+            vel_err = 0.9*lin_velocity_x-curr_lin_velocity_x
             throttle = self.lon_ctrl.step(error=vel_err, sample_time=t_d)
             # a negative throttle must force the car to brake
             if curr_lin_velocity_x < 1.0 and lin_velocity_x == 0.:
                 # do the 'handbrake'
                 brake = max_brake_force
                 throttle = 0.
-            elif throttle < 0. and vel_err < 0.:
+            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.5:
                 # if there is 'negative throttle' => request for brake
-                decelleration = max(abs(vel_err), abs(self.max_lon_decel))
+                decelleration = abs(self.max_lon_decel)
                 brake = abs(self.vehicle_mass * decelleration * self.wheel_radius)
         else:
-            # reset the internal I-value to prevent the I-part running amok when disengaged.  
+            # reset the internal I-value to prevent the I-part running amok when disengaged.
             self.lon_ctrl.reset()
 
         #rospy.logerr("Linear Velocity: {}".format(lin_velocity_x))
