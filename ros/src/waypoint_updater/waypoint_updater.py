@@ -102,13 +102,13 @@ class WaypointUpdater(object):
         if self.latest_stop_line_idx == -1 or (self.latest_stop_line_idx >= idx+LOOKAHEAD_WPS_FOR_DECELERATION):
             lane.waypoints = base_waypoints
         else:
+            # do the deceleration...
             lane.waypoints = self.decelerate_waypoints(base_waypoints, idx)
-
-        #rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
-        #    lane.waypoints[12].twist.twist.linear.x,
-        #    lane.waypoints[24].twist.twist.linear.x,
-        #    lane.waypoints[36].twist.twist.linear.x,
-        #    lane.waypoints[48].twist.twist.linear.x))
+            rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
+                lane.waypoints[20].twist.twist.linear.x,
+                lane.waypoints[40].twist.twist.linear.x,
+                lane.waypoints[60].twist.twist.linear.x,
+                lane.waypoints[79].twist.twist.linear.x))
 
         self.final_waypoints_pub.publish(lane)
 
@@ -129,12 +129,12 @@ class WaypointUpdater(object):
             At 0 m (actually before!) the car needs to stop.
             Car travels at 11.1 (m/s)
             '''
-            vel = abs((dist-1.)*11.1/52.0)  # remove one meter from the actual distance to make the car stop earlier
+            vel = abs((dist-3.)*11.1/52.0) # remove one meter from the actual distance to make the car stop earlier
             #rospy.logerr("{:1.1f}".format(vel))
 
             #if dist > dist_of_car_log:
             #    dist_of_car_log = dist
-            if vel < 0.5:
+            if vel < 1.0:
                 vel = 0.
             p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
             #rospy.logerr("{:1.1f}".format(p.twist.twist.linear.x))

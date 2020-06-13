@@ -40,7 +40,7 @@ class Controller(object):
         throttle = 0.       # range 0...1 (no acc to may acceleration)
         brake = 0.          # brake force in Nm, higher value => stronger braking (only positive range)
         steer = 0.          # TODO: most likely in radian (rule: si-units everywhere...)
-        max_brake_force = 400. # Nm
+        max_brake_force = 800. # Nm
 
         # there is some jitter in the measured velocity, therefore it needs to be filtered.
         # TODO: We introduce here an additional phase delay, would this make the pid controller somehow unstable?

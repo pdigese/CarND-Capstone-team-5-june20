@@ -13,7 +13,7 @@ import yaml
 import math
 
 STATE_COUNT_THRESHOLD = 2
-LOOK_AHEAD = 100
+LOOK_AHEAD = 200
 
 class TLDetector(object):
     def __init__(self):
@@ -84,15 +84,18 @@ class TLDetector(object):
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-            light_wp = -1
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-        else:
+        #if self.state != state:
+        #    self.state_count = 0
+        #    self.state = state
+        #    light_wp = -1
+        #elif self.state_count >= STATE_COUNT_THRESHOLD:
+        #    self.last_state = self.state
+        #    light_wp = light_wp if state == TrafficLight.RED else -1
+        #    self.last_wp = light_wp
+        #else:
+        #    light_wp = -1
+
+        if state != TrafficLight.RED:
             light_wp = -1
         
         # note: The video says to publish the stopline waypoint, however, the written instruction
@@ -100,6 +103,12 @@ class TLDetector(object):
         # However, the planner is not interested in the index of the traffic line but in the index of the stop line
         # where it is supposed to stop.
         # gerr('published stopline idx: %d',light_wp)
+        if state == TrafficLight.RED:
+            rospy.logerr('closest_light_index:%d, RED',light_wp)
+        if state == TrafficLight.YELLOW:
+            rospy.logerr('closest_light_index:%d, YELLOW',light_wp)
+        if state == TrafficLight.GREEN:
+            rospy.logerr('closest_light_index:%d, GREEN',light_wp)
         self.upcoming_red_light_pub.publish(Int32(light_wp))
         self.state_count += 1
 
@@ -207,13 +216,14 @@ class TLDetector(object):
                     min_delta_index = delta_index
                     closest_light_index = self.stop_wp_list[i]
                     tl_idx = i
-            #rospy.logerr('car_wp:%d',car_wp)
+                    #rospy.logerr('closest_light_index:%d',closest_light_index)
             
             if closest_light_index:
                 #rospy.logerr('closest_light_index:%d',closest_light_index)
                 cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
         #        cv2.imwrite(("images/{}.jpg".format(float(rospy.get_time()))),cv_image)
-            
+                
+                #state = self.get_light_state()
                 state = self.get_light_state(tl_idx)   # FIXME: remove the argument to use camera tl detection!!!
                 #rospy.logerr('light index:%d  state:%d',closest_light_index, state)
             
