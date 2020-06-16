@@ -14,8 +14,8 @@ class Controller(object):
         self.lon_ctrl = PID(kp = 0.5, 
             ki=0.001, 
             kd=2.0, 
-            mn=-1., # max throttle and not max speed
-            mx=1.) # min throttle and not min speed
+            mn=-1., # min throttle and not min speed
+            mx=1.) # man throttle and not max speed M:
         self.lat_ctrl = YawController(wheel_base=wheel_base, 
             steer_ratio=steer_ratio, 
             min_speed=min_speed,
@@ -40,7 +40,7 @@ class Controller(object):
         throttle = 0.       # range 0...1 (no acc to may acceleration)
         brake = 0.          # brake force in Nm, higher value => stronger braking (only positive range)
         steer = 0.          # TODO: most likely in radian (rule: si-units everywhere...)
-        max_brake_force = 400. # Nm
+        max_brake_force = 800. # Nm
 
         # there is some jitter in the measured velocity, therefore it needs to be filtered.
         # TODO: We introduce here an additional phase delay, would this make the pid controller somehow unstable?
@@ -54,16 +54,16 @@ class Controller(object):
 
         if dbw_enabled is True and t_d is not None:
             # t delta between the last and current sample is required in order to integrate / differentiate properly
-            vel_err = lin_velocity_x-curr_lin_velocity_x
+            vel_err = 0.9*lin_velocity_x-curr_lin_velocity_x
             throttle = self.lon_ctrl.step(error=vel_err, sample_time=t_d)
             # a negative throttle must force the car to brake
             if curr_lin_velocity_x < 1.0 and lin_velocity_x == 0.:
                 # do the 'handbrake'
                 brake = max_brake_force
                 throttle = 0.
-            elif throttle < 0. and vel_err < 0.:
+            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.1:
                 # if there is 'negative throttle' => request for brake
-                decelleration = max(abs(vel_err), abs(self.max_lon_decel))
+                decelleration = abs(self.max_lon_decel)
                 brake = abs(self.vehicle_mass * decelleration * self.wheel_radius)
         else:
             # reset the internal I-value to prevent the I-part running amok when disengaged.  

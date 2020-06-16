@@ -58,8 +58,8 @@ class DBWNode(object):
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
         # FIXME: which values should be used here:
-        min_speed = 0.1     # m/s ? Why is it even required?
-        max_speed = 20      # m/s ? What's the maximum allowed speed here?
+        min_speed = 0.1     # m/s ? Why is it even required? M:
+        max_speed = 20      # m/s ? What's the maximum allowed speed here? # Actually We are not using it. M:
 
         # TODO: Standard parameter are provided! Any ambition to make it more advanced?
         self.controller = Controller(min_speed=min_speed,
