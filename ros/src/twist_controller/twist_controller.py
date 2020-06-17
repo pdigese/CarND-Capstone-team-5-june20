@@ -61,7 +61,7 @@ class Controller(object):
                 # do the 'handbrake'
                 brake = max_brake_force
                 throttle = 0.
-            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.1:
+            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.5:
                 # if there is 'negative throttle' => request for brake
                 decelleration = abs(self.max_lon_decel)
                 brake = abs(self.vehicle_mass * decelleration * self.wheel_radius)
