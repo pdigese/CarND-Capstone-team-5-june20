@@ -49,6 +49,7 @@ class Controller(object):
 
         steer = self.lat_ctrl.get_steering(lin_velocity_x, ang_velocity_z, curr_lin_velocity_x)
 
+        t_d = None
         if self.t_past is not None:
             t_d = t_now - self.t_past
         self.t_past = t_now
