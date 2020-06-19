@@ -15,7 +15,8 @@ class TLClassifier(object):
     def __init__(self):
         #TODO load classifier
 
-	weight = 'weights.epoch-08__loss-0.02677__accuracy-0.99150__.hdf5'
+	weight = 'weights.epoch-06__loss-0.02387__.hdf5'
+
 	weight_dir = 'model'
 	self.model = Model_tl()
 
