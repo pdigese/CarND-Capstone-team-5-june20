@@ -9,14 +9,15 @@ ONE_MPH = 0.44704
 
 
 class Controller(object):
-    def __init__(self, min_speed, max_speed, wheel_base, steer_ratio, max_lat_accel, max_steer_angle, max_lon_decel, vehicle_mass, wheel_radius):
+
+    def __init__(self, min_speed, max_speed, wheel_base, steer_ratio, max_lat_accel, max_steer_angle, max_lon_decel, vehicle_mass, wheel_radius):    
         # FIXME: Find fitting parametrization for the longitudinal controller
-        self.lon_ctrl = PID(kp = 0.5,
-            ki=0.001,
-            kd=2.0,
-            mn=-1., # min throttle and not min speed
-            mx=1.) # max throttle and not max speed M:
-        self.lat_ctrl = YawController(wheel_base=wheel_base,
+        self.lon_ctrl = PID(kp = 0.5, 
+            ki=0.001, 
+            kd=2.0, 
+            mn=-1., # max throttle and not max speed
+            mx=1.) # min throttle and not min speed
+        self.lat_ctrl = YawController(wheel_base=wheel_base, 
             steer_ratio=steer_ratio,
             min_speed=min_speed,
             max_lat_accel=max_lat_accel,
