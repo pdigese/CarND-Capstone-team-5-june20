@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from scipy.spatial import KDTree
 import numpy as np
+from std_msgs.msg import Int32
 
 import math
 
@@ -24,12 +25,13 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
-
+LOOKAHEAD_WPS_FOR_DECELERATION = 50
 
 class WaypointUpdater(object):
     def __init__(self):
         self.waypoint_tree = None
         self.pose = None
+        self.latest_stop_line_idx = -1
 
         rospy.init_node('waypoint_updater')
 
@@ -37,13 +39,17 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
+        self.sub_tl_idx = rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_light_idx_cb)
 
-
-        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.final_waypoints_pub = rospy.Publisher('/final_waypoints', Lane, queue_size=1)
+        
 
         # TODO: Add other member variables you need below
 
         self.cyclic_traj_gen_and_publishing()
+
+    def traffic_light_idx_cb(self, msg):
+        self.latest_stop_line_idx = msg.data
 
     def cyclic_traj_gen_and_publishing(self):
         '''
@@ -92,8 +98,49 @@ class WaypointUpdater(object):
         '''
         lane = Lane()
         lane.header = self.all_waypoints.header
-        lane.waypoints = self.all_waypoints.waypoints[idx:idx+LOOKAHEAD_WPS]
+        base_waypoints = self.all_waypoints.waypoints[idx:idx+LOOKAHEAD_WPS]
+        if self.latest_stop_line_idx == -1 or (self.latest_stop_line_idx >= idx+LOOKAHEAD_WPS_FOR_DECELERATION):
+            lane.waypoints = base_waypoints
+        else:
+            # do the deceleration...
+            lane.waypoints = self.decelerate_waypoints(base_waypoints, idx)
+            rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
+                lane.waypoints[12].twist.twist.linear.x,
+                lane.waypoints[24].twist.twist.linear.x,
+                lane.waypoints[36].twist.twist.linear.x,
+                lane.waypoints[49].twist.twist.linear.x))
+
         self.final_waypoints_pub.publish(lane)
+
+    def decelerate_waypoints(self, base_wp, closest_wp):
+        MAX_DECEL = 1.
+        temp = []
+        #dist_of_car_log = 0.
+        for i, wp in enumerate(base_wp):
+            p = Waypoint()
+            p.pose = wp.pose
+
+            stop_idx = max(self.latest_stop_line_idx - closest_wp - 2, 0)
+            dist = self.distance(base_wp, i, stop_idx)
+            '''
+            Note: Dist is approx 64 (m?) if the stopline is 100 trajectory points away
+            ... and 32 m if trajectory point length is 50
+            ... and 52 m if trajectory point length is 80
+            At 0 m (actually before!) the car needs to stop.
+            Car travels at 11.1 (m/s)
+            '''
+            vel = abs((dist)*11.1/32.0) # remove one meter from the actual distance to make the car stop earlier
+            #rospy.logerr("{:1.1f}".format(vel))
+
+            #if dist > dist_of_car_log:
+            #    dist_of_car_log = dist
+            if vel < 0.2:
+                vel = 0.
+            p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
+            #rospy.logerr("{:1.1f}".format(p.twist.twist.linear.x))
+            temp.append(p)
+        
+        return temp
 
     def pose_cb(self, msg):
         '''

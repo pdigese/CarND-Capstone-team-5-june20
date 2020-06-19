@@ -9,15 +9,16 @@ ONE_MPH = 0.44704
 
 
 class Controller(object):
+
     def __init__(self, min_speed, max_speed, wheel_base, steer_ratio, max_lat_accel, max_steer_angle, max_lon_decel, vehicle_mass, wheel_radius):    
         # FIXME: Find fitting parametrization for the longitudinal controller
         self.lon_ctrl = PID(kp = 0.5, 
-            ki=0.001, 
-            kd=2.0, 
-            mn=-1., # max throttle and not max speed
-            mx=1.) # min throttle and not min speed
+            ki=0.1, 
+            kd=0., 
+            mn=-1., # min throttle and not max speed
+            mx=0.7) # max throttle and not min speed
         self.lat_ctrl = YawController(wheel_base=wheel_base, 
-            steer_ratio=steer_ratio, 
+            steer_ratio=steer_ratio,
             min_speed=min_speed,
             max_lat_accel=max_lat_accel,
             max_steer_angle=max_steer_angle)
@@ -61,12 +62,12 @@ class Controller(object):
                 # do the 'handbrake'
                 brake = max_brake_force
                 throttle = 0.
-            elif throttle < 0. and vel_err < 0.:
+            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.05:
                 # if there is 'negative throttle' => request for brake
-                decelleration = max(abs(vel_err), abs(self.max_lon_decel))
+                decelleration = abs(self.max_lon_decel) * abs(throttle)
                 brake = abs(self.vehicle_mass * decelleration * self.wheel_radius)
         else:
-            # reset the internal I-value to prevent the I-part running amok when disengaged.  
+            # reset the internal I-value to prevent the I-part running amok when disengaged.
             self.lon_ctrl.reset()
 
         #rospy.logerr("Linear Velocity: {}".format(lin_velocity_x))
