@@ -26,7 +26,7 @@ TODO: Description goes here.
 
 """
 Note: All functions (whih are not belonging to the class itself) are copied from:
-- load_graph, filter_boxes and to_image_coords:
+- load_graph, pick_best_box and to_image_coords:
 https://github.com/udacity/CarND-Object-Detection-Lab/blob/master/CarND-Object-Detection-Lab.ipynb
 - pipeline:
 https://github.com/udacity/CarND-Object-Detection-Lab/blob/e91d0de6cd54834966cdb06b0172e23f8a0c124f/exercise-solutions/e5.py
@@ -65,14 +65,13 @@ class ObjDetection(object):
         self.sub_pos = rospy.Subscriber("/current_pose", PoseStamped, self.pose_cb)
 
         self.pub_detected = rospy.Publisher("/image_detection", Image, queue_size=1)
-        self.pub_cropped_img = rospy.Publisher("/image_cropped", Image, queue_size=10)
 
         rospy.loginfo("Coco has been initialized successfully")
         self.loop()
 
     def loop(self):
         rate = rospy.Rate(
-            2
+            10
         )  # 1Hz TODO: What's a goo frequency here? It's an heavy job...
         with tf.Session(graph=self.detection_graph) as self.sess:
             self.image_tensor = self.sess.graph.get_tensor_by_name("image_tensor:0")
@@ -129,18 +128,20 @@ class ObjDetection(object):
                 tf.import_graph_def(od_graph_def, name="")
         return graph
 
-    def filter_boxes(self, min_score, boxes, scores, classes):
-        """Return boxes with a confidence >= `min_score`"""
+    def pick_best_box(self, min_score, boxes, scores, classes):
+        """Return a box with the highest confidence"""
         n = len(classes)
         idxs = []
+        max_score = -1
         for i in range(n):
-            if scores[i] >= min_score:
-                idxs.append(i)
+            if scores[i] >= max_score and scores[i] >= min_score:
+                idxs = [i]
+                max_score = scores[i]
 
-        filtered_boxes = boxes[idxs, ...]
-        filtered_scores = scores[idxs, ...]
-        filtered_classes = classes[idxs, ...]
-        return filtered_boxes, filtered_scores, filtered_classes
+        filtered_box = boxes[idxs, ...]
+        filtered_score = scores[idxs, ...]
+        filtered_class = classes[idxs, ...]
+        return filtered_box, filtered_score, filtered_class
 
     def to_image_coords(self, boxes, height, width):
         """
@@ -162,21 +163,13 @@ class ObjDetection(object):
         draw = ImageDraw.Draw(image)
         for i in range(len(boxes)):
             bot, left, top, right = boxes[i, ...]
-            class_id = int(classes[i])
-            color = COLOR_LIST[class_id]
-            class_label = "NONE"
-            if classes[i] == 1:
-                class_label = "GREEN"
-            elif classes[i] == 2:
-                class_label = "RED"
-            elif classes[i] == 3:
-                class_label = "YELLOW"
+            color = (int(classes[i])//2*255, int(classes[i])%2*255, 0)
             draw.line(
                 [(left, top), (left, bot), (right, bot), (right, top), (left, top)],
                 width=thickness,
                 fill=color,
             )
-            draw.text((left, top), "{} Score: {}".format(class_label, scores[i]))
+            draw.text((left, top), "{}".format(round(1E4*scores[i])/100))
 
     def get_closest_tl_state(self, pose):
         """
@@ -212,20 +205,20 @@ class ObjDetection(object):
         scores = np.squeeze(scores)
         classes = np.squeeze(classes)
 
-        confidence_cutoff = 0.2
+        confidence_cutoff = 0.4
 
         # Filter boxes with a confidence score less than `confidence_cutoff`
-        boxes, scores, classes = self.filter_boxes(
+        best_box, best_score, best_class = self.pick_best_box(
             confidence_cutoff, boxes, scores, classes
         )
 
         # The current box coordinates are normalized to a range between 0 and 1.
         # This converts the coordinates actual location on the image.
         width, height = draw_img.size
-        box_coords = self.to_image_coords(boxes, height, width)
+        box_coords = self.to_image_coords(best_box, height, width)
 
         # Each class with be represented by a differently colored box
-        self.draw_boxes(draw_img, box_coords, classes, scores)
+        self.draw_boxes(draw_img, box_coords, best_class, best_score)
         return np.array(draw_img)
 
 
