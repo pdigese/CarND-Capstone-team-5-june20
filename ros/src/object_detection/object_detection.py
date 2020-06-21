@@ -22,6 +22,7 @@ SSD_GRAPH_FILE = "/../../../nn/frozen_inference_graph.pb"
 
 """
 TODO: Description goes here.
+This file is aimed to use the machine learning method to process the upcoming traffic light in real life and publishes color prediction and the location of any upcomming red lights.
 """
 
 """
@@ -63,8 +64,9 @@ class ObjDetection(object):
             "/vehicle/traffic_lights", TrafficLightArray, self.tls_cb
         )
         self.sub_pos = rospy.Subscriber("/current_pose", PoseStamped, self.pose_cb)
-
+        
         self.pub_detected = rospy.Publisher("/image_detection", Image, queue_size=1)
+        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         rospy.loginfo("Coco has been initialized successfully")
         self.loop()
@@ -99,7 +101,7 @@ class ObjDetection(object):
                     image_message = bridge.cv2_to_imgmsg(
                         processed_image, encoding="rgb8"
                     )  # required by the rqt_image_viewer
-                    self.pub_detected.publish(image_message)
+#                    self.pub_detected.publish(image_message)
                 rate.sleep()
 
     def pose_cb(self, msg):
@@ -112,6 +114,10 @@ class ObjDetection(object):
         self.latest_img = bridge.imgmsg_to_cv2(
             msg, desired_encoding="rgb8"
         )  # TODO: coco requires rgb as far as I know
+        stop_line_pos = self.config["stop_line_positions"]
+        state = get_closest_tl_state(self.curr_pose)
+        if state == 'TrafficLight.RED': # TODO: not sure if TrafficLight.RED is right
+            self.upcoming_red_light_pub.publish(stop_line_pos) # TODO: check with waypoints updater shall we publish index(like as tl_detector.py) or position. Since we have only one traffic light would be easier, no index issue
 
     def tls_cb(self, msg):
         # receives a whole list of traffic lights
