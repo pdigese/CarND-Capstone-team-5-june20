@@ -224,7 +224,7 @@ class TLDetector(object):
         #        cv2.imwrite(("images/{}.jpg".format(float(rospy.get_time()))),cv_image)
                 
                 #state = self.get_light_state()
-                state = self.get_light_state(tl_idx)   # FIXME: remove the argument to use camera tl detection!!!
+                state = self.get_light_state()   # FIXME: remove the argument to use camera tl detection!!!
                 #rospy.logerr('light index:%d  state:%d',closest_light_index, state)
             
                 return closest_light_index, state
