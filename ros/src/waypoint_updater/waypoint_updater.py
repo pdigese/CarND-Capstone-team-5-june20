@@ -30,10 +30,61 @@ LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this nu
 LOOKAHEAD_WPS_FOR_DECELERATION = 50
 MAX_SPEED = 11.1111 # ms
 STOPLINE_BUFFER = 2. # m
+REMAINING_DIST_TOO_CLOSE_FOR_DECEL = 10.    # If the car is at full speed and less then this distance ahead of the stop line
 
 
 class WaypointUpdater(object):
+    '''
+    Class for creating waypoints with the required longitudinal velocity information.
+    Waypoints are already given by the '/base_waypoints' topic, where each waypoint contains
+    a predefined speed of 11.1111 m/s. This speed needs to be set up based on the upcoming traffic
+    light state so that the car stops at the traffic light stop lane.
+
+    Once a traffic light is being reported, and the distance to the stop line is less than 
+    LOOKAHEAD_WPS_FOR_DECELERATION waypoints, then the trajectory is planned such the car stops
+    with its center 2 meters in front of the stop line.
+
+    The deceleration is planned as follows:
+
+    VELOCITY
+    ^
+    |        <--- MAX_VELOCITY --->              XXXXXXXXX|
+    |                                   XXXXXXXXX
+    |                             XXXXXX                  |
+    |                       XXXXXX
+    |                     XX                              |
+    |                   XX
+    |                  X                                  |
+    |                XX
+    |               X                                 +-- |
+    |              X                          START OF
+    |             X                           DECELERATION|
+    |            X
+    |           X                                         |
+    |         XX
+    |      XXX                                            |
+    |  XXXX
+    +XX---------------------------------------------------------->
+    0                                         DISTANCE TO STOP LINE
+
+    Note: Thes x-axis is the distance to the stop line AND not the time,
+    therefore the actual velocity behavior over time looks different!
+
+    The curve is defined by splines, and the max velocity and distance
+    to stop line is normalized to 1.
+
+    For each trajectory point this model is being used.
+    Trjectoy points right of "START OF DECELERATION" keep their velocity
+    (max velocity), whereas trajectory points left of this model are kept
+    at zero velocity. Any other trajectory point's velocity is planned
+    according to the model above.
+
+    '''
     def __init__(self):
+        '''
+        Constructor for the Waypoint updater. Subscribes all required packages and
+        start publishing the final waypoints, which need to be followed.
+        '''
         self.waypoint_tree = None
         self.pose = None
         self.latest_stop_line_idx = -1
@@ -48,16 +99,13 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.car_curr_vel_cb)
 
-        # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
         self.sub_tl_idx = rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_light_idx_cb)
-
         self.final_waypoints_pub = rospy.Publisher('/final_waypoints', Lane, queue_size=1)
         
-        # spline for the velocity decelleration
+        # spline for the velocity deceleration
         x = np.array([-0.1, 0., .1, .3333, 1., 1.1])
         y = np.array([0., 0., .1, .5, 1., 1.])
         self.vel_spline = interpolate.splrep(x, y, s=0)
-        # TODO: Add other member variables you need below
 
         self.cyclic_traj_gen_and_publishing()
 
@@ -79,6 +127,8 @@ class WaypointUpdater(object):
             # ENDLESS LOOP
             if self.waypoint_tree and self.pose:
                 wp_idx = self.get_closest_waypoint_idx() # gets the waypoint where we currently are
+                # Publish the coming 50 trajectory points based on the vehicles current waypoint
+                # ahead (wp_idx)
                 self.publish_trajectory_v2(wp_idx)
             # "END" OF ENDLESS LOOP, wait the remaining time
             rate.sleep()
@@ -99,9 +149,7 @@ class WaypointUpdater(object):
         prev_pt = np.array(self.waypoint_xy[nearest_wp_idx-1]) # any chance of idx out of range?
         curr_pt = np.array([self.pose.pose.position.x, self.pose.pose.position.y])
         val = np.dot(closest_pt - prev_pt, curr_pt - closest_pt)
-        '''
-        TODO: Find your own approach to identify the closest point...
-        '''
+
         if val > 0:
             nearest_wp_idx = (nearest_wp_idx + 1) % len(self.waypoint_xy)
         return nearest_wp_idx
@@ -120,19 +168,19 @@ class WaypointUpdater(object):
         else:
             # do the deceleration...
             lane.waypoints = self.decelerate_waypoints(base_waypoints, idx)
-            rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
-                lane.waypoints[12].twist.twist.linear.x,
-                lane.waypoints[24].twist.twist.linear.x,
-                lane.waypoints[36].twist.twist.linear.x,
-                lane.waypoints[49].twist.twist.linear.x))
+            #rospy.logerr("Velocity: {:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}-{:2.1f}".format(lane.waypoints[0].twist.twist.linear.x, 
+            #    lane.waypoints[12].twist.twist.linear.x,
+            #    lane.waypoints[24].twist.twist.linear.x,
+            #    lane.waypoints[36].twist.twist.linear.x,
+            #    lane.waypoints[49].twist.twist.linear.x))
 
         self.final_waypoints_pub.publish(lane)
 
     def publish_trajectory_v2(self, idx):
         '''
-        Publishes the LOOKAHEAD_WPS trajectory points of the base_waypoints to the final_waypoint topic.
-        If the end of the base_waypoints are reached, the published trajectory gets shorter until there is
-        no trajectory point left.
+        Publishes the trajectory based on whether it is required to stop or not. If there is a stop request
+        (elf.latest_stop_line_idx is not -1), then a deceleration is being planned acc to the model given
+        in the explanation of this class. 
         '''
         lane = Lane()
         lane.header = self.all_waypoints.header
@@ -140,68 +188,29 @@ class WaypointUpdater(object):
         if self.latest_stop_line_idx == -1 or (self.latest_stop_line_idx >= idx+LOOKAHEAD_WPS_FOR_DECELERATION):
             
             self.decelleration_start_pos_already_found = False
-
-            #'''
-            #A new acceleration end pos is defined if acceleration is required 
-            #(vehicle too slow and now TL ahead)
-            #'''
-            #if self.curr_vel is not None and self.curr_vel < (MAX_SPEED - 1.) and self.acceleration_end_pos_required == False:
-            #    self.acceleration_end_pos_required = True
-            #    '''
-            #    Define the acceleration end point.
-            #    If there is a big difference between MAX_SPEED and current velocity,
-            #    then use a longer distance for acceleration (linear dependency)
-            #    '''
-            #    self.accel_dist = (MAX_SPEED - self.curr_vel) * 5.
-            #    '''
-            #    Find the waypoint in front of the car, assuming, that the indices are increasing.
-            #    '''
-            #    for i in range (1,300):
-            #        possible_accel_wp_end = i + idx
-            #        if self.distance(self.all_waypoints, idx, possible_acc_end) > self.accel_dist:
-            #            self.actual_accel_wp_end = possible_accel_wp_end
-#
-            #if self.acceleration_end_pos_required == True:
-            #    lane.waypoints = []
-            #    for i, wp in enumerate(base_waypoints):
-            #        idx += i
-            #        remaining_dist = self.distance(self.all_waypoints.waypoints, idx, self.latest_stop_line_idx) - STOPLINE_BUFFER
-            #        vel_at_dist = self.velocity_model(remaining_dist ,self.total_decel_len, MAX_SPEED)
-            #        if i == 0:
-            #            rospy.logerr("Remaining decelleration length: {:1.1f}, current speed: {:1.1f}".format(remaining_dist, vel_at_dist))
-            #        p = Waypoint()
-            #        p.pose = wp.pose
-            #        p.twist.twist.linear.x = vel_at_dist
-            #        lane.waypoints.append(p)
-            #else:
-            #    '''
-            #    Just copy.
-            #    '''
             lane.waypoints = base_waypoints
 
         else:
             if self.decelleration_start_pos_already_found == False:
                 '''
-                if we are not within the decelleration zone, but we just have entered it (this condition)
+                if we are not within the deceleration zone, but we just have entered it (this condition)
                 then we need to identify where we need to start the decelleration and where it shall be
                 finished.
                 '''
                 self.total_decel_len = self.distance(self.all_waypoints.waypoints, idx, self.latest_stop_line_idx) - STOPLINE_BUFFER
-                if not self.total_decel_len < 10.:  # assuming that we're traveling at full speed
+                if not self.total_decel_len < REMAINING_DIST_TOO_CLOSE_FOR_DECEL:  # assuming that we're traveling at full speed
                     self.decelleration_start_pos_already_found = True
-                    rospy.logerr("Decelleration started with: {:1.1f}m until stopline".format(self.total_decel_len))
-                else:
-                    rospy.logerr("Keep driving, too close to stopline")
+                    #rospy.logerr("Decelleration started with: {:1.1f}m until stopline".format(self.total_decel_len))
+                #else:
+                    #rospy.logerr("Keep driving, too close to stopline")
 
-            #MAX_SPEED = base_waypoints[0].twist.twist.linear.x # should be always 11.1111 m/s
-            
             lane.waypoints = []
             for i, wp in enumerate(base_waypoints):
                 curr_idx = idx + i
                 remaining_dist = self.distance(self.all_waypoints.waypoints, curr_idx, self.latest_stop_line_idx) - STOPLINE_BUFFER
                 vel_at_dist = self.velocity_model(remaining_dist ,self.total_decel_len, MAX_SPEED)
-                if i == 0:
-                    rospy.logerr("Remaining decelleration length: {:1.1f}, current speed: {:1.1f}".format(remaining_dist, vel_at_dist))
+                #if i == 0:
+                    #rospy.logerr("Remaining decelleration length: {:1.1f}, current speed: {:1.1f}".format(remaining_dist, vel_at_dist))
                 p = Waypoint()
                 p.pose = wp.pose
                 p.twist.twist.linear.x = vel_at_dist
@@ -211,7 +220,13 @@ class WaypointUpdater(object):
         self.final_waypoints_pub.publish(lane)
 
     def velocity_model(self, remaining_dist, total_dist, max_velocity):
-
+        '''
+        Returns the velocity for a distance ahead of the stopline.
+        Uses remaining_dist and total_dist to identify how far the 
+        car is away from the stopline in the normalized model. The
+        resulting normalized velocity is then adapted to the desired
+        max speed (max_velocity).
+        '''
         x_interp = np.array([min(remaining_dist / total_dist, 1.)])
         y_interp = interpolate.splev(x_interp, self.vel_spline, der=0)
         if y_interp[0] > 1.:
@@ -223,7 +238,10 @@ class WaypointUpdater(object):
         return vel
 
     def decelerate_waypoints(self, base_wp, closest_wp):
-        MAX_DECEL = 1.
+        '''
+        Like the method "velocity_model()", but returns
+        a linear deceleration. 
+        '''
         temp = []
         #dist_of_car_log = 0.
         for i, wp in enumerate(base_wp):
@@ -242,8 +260,6 @@ class WaypointUpdater(object):
             vel = abs((dist)*11.1/32.0) # remove one meter from the actual distance to make the car stop earlier
             #rospy.logerr("{:1.1f}".format(vel))
 
-            #if dist > dist_of_car_log:
-            #    dist_of_car_log = dist
             if vel < 0.2:
                 vel = 0.
             p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
@@ -275,14 +291,6 @@ class WaypointUpdater(object):
             self.waypoint_tree = KDTree(self.waypoint_xy)
             rospy.loginfo("All waypoints received...")
 
-    def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Shall be implemented once the tl detection works
-        pass
-
-    def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message. Shall be implemented once the obstacle detection works
-        pass
-
     def get_waypoint_velocity(self, waypoint):
         return waypoint.twist.twist.linear.x
 
@@ -296,7 +304,6 @@ class WaypointUpdater(object):
             dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
             wp1 = i
         return dist
-
 
 if __name__ == '__main__':
     try:
