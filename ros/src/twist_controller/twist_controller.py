@@ -59,14 +59,22 @@ class Controller(object):
             vel_err = lin_velocity_x-curr_lin_velocity_x
             throttle = self.lon_ctrl.step(error=vel_err, sample_time=t_d)
             # a negative throttle must force the car to brake
-            if curr_lin_velocity_x < 1.0 and lin_velocity_x == 0.:
+            if curr_lin_velocity_x < 0.1 and lin_velocity_x < 0.1:
                 # do the 'handbrake'
                 brake = max_brake_force
                 throttle = 0.
-            elif throttle < 0. and curr_lin_velocity_x/(lin_velocity_x+0.000001) > 1.05:
-                # if there is 'negative throttle' => request for brake
-                decelleration = abs(self.max_lon_decel) * abs(throttle)
-                brake = abs(self.vehicle_mass * decelleration * self.wheel_radius)
+            elif throttle < -0.05 and vel_err < 0.:
+                # if there is 'negative throttle' and requested velocity is smaller than measured velocity (vel_err < 0)
+                corr_factor = 2.5
+                decelleration = min(abs(self.max_lon_decel), abs(vel_err))
+                brake = abs(self.vehicle_mass * decelleration * self.wheel_radius) * corr_factor
+                throttle = 0.
+            elif throttle > 0.05 and vel_err > 0.:
+                brake = 0.
+            else:
+                brake = 0.
+                throttle = 0.
+
         else:
             # reset the internal I-value to prevent the I-part running amok when disengaged.
             self.lon_ctrl.reset()
