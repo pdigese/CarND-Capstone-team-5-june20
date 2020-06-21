@@ -2,6 +2,7 @@ from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
 import os
+import rospy
 
 SSD_GRAPH_FILE = "/../../../../nn/frozen_inference_graph.pb"
 
@@ -11,6 +12,8 @@ class TLClassifierRL(object):
         self.graph = self.load_graph(os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE)
 
         self.sess = tf.Session(graph=self.graph)
+
+        self.threshold = 0.5
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -30,6 +33,14 @@ class TLClassifierRL(object):
 
         scores = np.squeeze(detection_scores)
         classes = np.squeeze(detection_classes).astype(np.int32)
+
+        # introducing logging msg
+
+        for i, score in enumerate(scores):
+            rospy.logerr("Score: {} - {}".format(i, score))
+
+        for i, class_ in enumerate(classes):
+            rospy.logerr("Class: {} - {}".format(i, class_))
 
         if scores[0] > self.threshold:
             if classes[0] == 1:

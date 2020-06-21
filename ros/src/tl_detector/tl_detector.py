@@ -117,7 +117,7 @@ class TLDetector(object):
         if state == TrafficLight.GREEN:
             rospy.logerr('closest_light_index:%d, GREEN', light_wp)
         self.upcoming_red_light_pub.publish(Int32(light_wp))
-        self.state_count += 1
+        #self.state_count += 1
 
     def get_closest_waypoint(self, position):
         """Identifies the closest path waypoint to the given position
