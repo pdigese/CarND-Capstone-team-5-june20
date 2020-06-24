@@ -7,7 +7,7 @@ The project result was test both in the simulator and on the real road in Califo
 In this project, we built up a team of 5 students from Udacity.
 
 ## System Overview
-![Documentation_Pics](final-project-ros-graph-v2.png)
+![alt text](Documentation_Pics/final-project-ros-graph-v2.png)
 
 ## Waypoints Updater
 
