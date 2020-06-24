@@ -28,11 +28,19 @@ Udacity provided a bag file with measurements of a controller reference implemen
 
 We found following issue:
 
-* The brake is too weak. For an unknown reason, the reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore I introduced a magic number multiplication of 2.5 to fix this. Let me know if you wish another implementation.
+* The brake is too weak. For an unknown reason, the reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore we introduced a correction factor of 2.5 to fix this.
 
-* Throttle is kind of similar to Udacity's reference implementation, but a bit weaker. Shouldn't be a big drawback.
-All in all their is a certain similarity, but it's not the same. Hope that's ok for you guys.
+* Throttle is kind of similar to Udacity's reference implementation, but a bit weaker. It shouldn't be a big drawback.
 
+Finally, the comparison is following:
+
+The folowing picture shows how the brake force is applied. Blue: Udacity, Red: ours. x-axis: sampling time sequences, y-axis: Nm
+
+![alt text](Documentation_Pics/Brake.JPG)
+
+In the next picture you find how the throttle applied. Blue: Udacity, Red: ours, x-axis: sampling time sequences, y-axis: throttle_percentage * 1000. Udacity's throttle implementation looks a bit strange especially since they have throttle after sample 1767 where Udacity's brake controller also applies brake force at the same time. Overall our throttle can keep the vehicle speed stable at the given speed.
+
+![alt text](Documentation_Pics/Throttle.JPG)
 
 
 
