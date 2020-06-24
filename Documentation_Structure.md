@@ -15,13 +15,25 @@ In the following section, you will get more insights regarding to each component
 ## Waypoints Updater
 The purpose of this node is to publish a fixed number of waypoints ahead of the vehicle with the correct target velocities, depending on traffic lights and obstacles.
 
-A visual presentation of the waypoints heading vehicle 
+A visual presentation of the waypoints heading vehicle is following.
 
 ![alt text](Documentation_Pics/Way_Points_In_Simulator.JPG)
 
 In the way ponts updater we took care of the maximal acceleration, deceleration and jerk limitations in terms of velocity planning.
 
 ## Controller
+In the controller part, we implementated PID controller for throttle, two feed forward controllers for brake and steering wheel angle. 
+
+Udacity provided a bag file with measurements of a controller reference implementation. The bag file can be applied to our own controller, so that we can compare the reference implementation and the own implementation. 
+
+We found following issue:
+
+* The brake is too weak. For an unknown reason, the reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore I introduced a magic number multiplication of 2.5 to fix this. Let me know if you wish another implementation.
+
+* Throttle is kind of similar to Udacity's reference implementation, but a bit weaker. Shouldn't be a big drawback.
+All in all their is a certain similarity, but it's not the same. Hope that's ok for you guys.
+
+
 
 
 ## Traffic Light Detection
