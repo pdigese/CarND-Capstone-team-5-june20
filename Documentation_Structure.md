@@ -1,6 +1,6 @@
 # Capstone Project - Program a Real Self-Driving Car
 
-As the final project in the Self Driving Car Nanodegree, we need to program necessary ROS nodes and integrate them to a whole system. Then the car should be able to navigate itself along the test track and stop before stop lines if the red traffic light is detected. 
+In this final project of Self Driving Car Nanodegree, we need to program necessary ROS nodes and integrate them to a whole self driving system, in order to make the car be able to navigate itself along the test track and stop before stop lines when red traffic light is detected. 
 
 The project result was test both in the simulator and on the real road in California, USA.
 
@@ -19,39 +19,41 @@ A visual presentation of the waypoints heading vehicle is following.
 
 ![alt text](Documentation_Pics/Way_Points_In_Simulator.JPG)
 
-In the way ponts updater we took care of the maximal acceleration, deceleration and jerk limitations in terms of velocity planning.
+In the way points updater we took care of the maximal acceleration, deceleration and jerk limitations as physical boundaries in terms of velocity planning.
 
 ## Controllers
-Controllers are responsible for transmit the driving commant i.e. throttle percentage value, brake force and steering angle to the drive by wire system. 
+Controllers are responsible for transmitting the driving commands i.e. throttle percentage value, brake force and steering wheel angle to the drive by wire system in the test vehicle.
 
-We implementated PID controller for throttle, two feed forward controllers for brake and steering wheel angle. 
+We implementated PID controller for throttle, two feed forward controllers respective for brake and steering wheel angle. 
 
-Udacity provided a bag file with measurements of a controller reference implementation. The bag file can be applied to our own controller, so that we can compare the reference implementation and the own implementation. 
+Udacity provided a bag file with measurements of a controller as reference implementation. The bag file can be applied to our own controller, so that we can compare the reference and our implementation. 
 
-We found following issue:
+We found the following issues:
 
-* The brake is too weak. For an unknown reason, the reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore we introduced a correction factor of 2.5 to fix this.
+* The brake was too weak. The reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore we introduced a correction factor of 2.5 to fix this.
 
-* Throttle is kind of similar to Udacity's reference implementation, but a bit weaker. It shouldn't be a big drawback.
-
-Finally, the comparison is following:
+* Throttle is similar to Udacity's reference implementation, but a bit weaker. It shouldn't be a big drawback.
 
 The folowing picture shows how the brake force is applied. Blue: Udacity, Red: ours. x-axis: sampling time sequences, y-axis: Nm
 
 ![alt text](Documentation_Pics/Brake.JPG)
 
-In the next picture you find how the throttle applied. Blue: Udacity, Red: ours, x-axis: sampling time sequences, y-axis: throttle_percentage * 1000. Udacity's throttle implementation looks a bit strange especially since they have throttle after sample 1767 where Udacity's brake controller also applies brake force at the same time. Overall our throttle can keep the vehicle speed stable at the given speed.
+In the next picture you find how the throttle applied. Blue: Udacity, Red: ours, x-axis: sampling time sequences, y-axis: throttle_percentage * 1000. 
 
 ![alt text](Documentation_Pics/Throttle.JPG)
+
+Udacity's throttle implementation looks a bit strange especially since they have throttle after sample 1767 where Udacity's brake controller also applies brake force at the same time. Overall our throttle can keep the vehicle speed stable around the given speed.
 
 ## Traffic Light Detection
 
 This part should process the incomming traffic light position data and camera image to get color prediction and publish the location of any upcoming red lights, so that the waypoints updater will plan the velocity accordingly.
 
-Because of the enorm szenario difference between simulator and real life situation, we decided to use two machine learning model to conduct the process respectively.
+Because of the enorm szenario difference between simulation and real life, we decided to use two machine learning models to process respectively.
 
 ### Szenario Simulator 
 We built a neural network, consists of 7 convolutional layers and 3 full connected layers, to process the full incoming image and predict the color in four categories (0:TrafficLight.RED , 1:TrafficLight.YELLOW ,2:TrafficLight.GREEN ,3:TrafficLight.UNKNOWN).
 
 ### Szenario Real-Life
-Firstly we would find where the traffic light in the picture is and put them in boxes . Then we will predict based on the finded boxes to predict the colors with the trained neural SSD network mobileNet version 1. In the training process, we added pictures of cloudy and sunny weather to reduce the bias. 
+Firstly we would find where the traffic light in the picture is and put them in boxes . Then we will predict based on the finded boxes to predict the colors with the trained SSD mobileNet version 1 neural network. 
+
+Furthermore, in the training process, we added pictures of cloudy and sunny weather to reduce the bias. 
