@@ -1,1 +1,1 @@
-In this folder, the necessary pictures for documentation would be saved.
+In this folder, the necessary pictures for documentation would be stored.
