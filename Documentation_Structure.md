@@ -8,9 +8,18 @@ In this project, we built up a team of 5 students from Udacity.
 
 ## System Overview
 ![alt text](Documentation_Pics/final-project-ros-graph-v2.png)
+The above picture presents the system architecture showing the ROS nodes and topics used in the project.
+
+In the following section, you will get more insights regarding to each component.
 
 ## Waypoints Updater
+The purpose of this node is to publish a fixed number of waypoints ahead of the vehicle with the correct target velocities, depending on traffic lights and obstacles.
 
+A visual presentation of the waypoints heading vehicle 
+
+![alt text](Documentation_Pics/Way_Points_In_Simulator.JPG)
+
+In the way ponts updater we took care of the maximal acceleration, deceleration and jerk limitations in terms of velocity planning.
 
 ## Controller
 
