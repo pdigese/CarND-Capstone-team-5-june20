@@ -24,7 +24,7 @@ In the way points updater we took care of the maximal acceleration, deceleration
 ## Controllers
 Controllers are responsible for transmitting the driving commands i.e. throttle percentage value, brake force and steering wheel angle to the drive by wire system in the test vehicle.
 
-We implementated PID controller for throttle, two feed forward controllers respective for brake and steering wheel angle. 
+We implemented PID controller for throttle, two feed forward controllers respective for brake and steering wheel angle. 
 
 Udacity provided a bag file with measurements of a controller as reference implementation. The bag file can be applied to our own controller, so that we can compare the reference and our implementation. 
 
@@ -34,7 +34,7 @@ We found the following issues:
 
 * Throttle is similar to Udacity's reference implementation, but a bit weaker. It shouldn't be a big drawback.
 
-The folowing picture shows how the brake force is applied. Blue: Udacity, Red: ours. x-axis: sampling time sequences, y-axis: Nm
+The following picture shows how the brake force is applied. Blue: Udacity, Red: ours. x-axis: sampling time sequences, y-axis: Nm
 
 ![alt text](Documentation_Pics/Brake.JPG)
 
@@ -46,14 +46,14 @@ Udacity's throttle implementation looks a bit strange especially since they have
 
 ## Traffic Light Detection
 
-This part should process the incomming traffic light position data and camera image to get color prediction and publish the location of any upcoming red lights, so that the waypoints updater will plan the velocity accordingly.
+This part should process the incoming traffic light position data and camera image to get color prediction and publish the location of any upcoming red lights, so that the waypoints updater will plan the velocity accordingly.
 
-Because of the enorm szenario difference between simulation and real life, we decided to use two machine learning models to process respectively.
+Because of the enorm scenario difference between simulation and real life, we decided to use two machine learning models to process respectively.
 
-### Szenario Simulator 
+### Scenario Simulator 
 We built a neural network, consists of 7 convolutional layers and 3 full connected layers, to process the full incoming image and predict the color in four categories (0:TrafficLight.RED , 1:TrafficLight.YELLOW ,2:TrafficLight.GREEN ,3:TrafficLight.UNKNOWN).
 
-### Szenario Real-Life
-Firstly we would find where the traffic light in the picture is and put them in boxes . Then we will predict based on the finded boxes to predict the colors with the trained SSD mobileNet version 1 neural network. 
+### Scenario Real-Life
+Firstly we would find where the traffic light in the picture is and put them in boxes . Then we will predict based on the found boxes to predict the colours with the trained SSD mobileNet version 1 neural network. 
 
 Furthermore, in the training process, we added pictures of cloudy and sunny weather to reduce the bias. 
