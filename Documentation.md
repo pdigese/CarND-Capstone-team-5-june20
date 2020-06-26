@@ -53,13 +53,13 @@ Once the car is required to accelerate (red traffic light disappears), then the 
 
 
 ## Controllers
-Controllers are responsible for transmitting the driving commands i.e. throttle percentage value, brake force and steering wheel angle to the drive by wire system in the test vehicle.
+Controllers are responsible for generating the driving commands i.e. throttle percentage value, brake force and steering wheel angle to the drive by wire system in the test vehicle based on the the waypoints from the above waypoints updater. 
 
-We implemented PID controller for throttle, two feed forward controllers respective for brake and steering wheel angle. 
+We implemented PID controller for throttle, two feed forward controllers respectively for brake and steering wheel angle. 
 
 Udacity provided a bag file with measurements of a controller as reference implementation. The bag file can be applied to our own controller, so that we can compare the reference and our implementation. 
 
-We found the following issues:
+In the mean time we found the following issues:
 
 * The brake was too weak. The reference implementation applies 2.5 - 3.0 higher brake force than our twist controller. Therefore we introduced a correction factor of 2.5 to fix this.
 
