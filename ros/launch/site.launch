@@ -12,9 +12,6 @@
     <!--Waypoint Updater Node -->
     <include file="$(find waypoint_updater)/launch/waypoint_updater.launch"/>
 
-    <!--Object Detection Node -->
-    <include file="$(find object_detection)/launch/object_detection.launch"/>
-
     <!--Traffic Light Locations and Camera Config -->
     <param name="traffic_light_config" textfile="$(find tl_detector)/site_traffic_light_config.yaml" />
 
