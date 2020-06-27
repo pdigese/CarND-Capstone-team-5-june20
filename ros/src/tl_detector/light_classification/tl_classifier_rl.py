@@ -5,6 +5,7 @@ import os
 
 SSD_GRAPH_FILE = "/../../../nn/frozen_inference_graph.pb"
 
+
 class TLClassifierRL(object):
     def __init__(self):
         self.graph = self.load_graph(os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE)
@@ -52,12 +53,12 @@ class TLClassifierRL(object):
 
                 self.image_tensor = graph.get_tensor_by_name("image_tensor:0")
                 self.detection_boxes = graph.get_tensor_by_name(
-					"detection_boxes:0"
-				)
+                    "detection_boxes:0"
+                )
                 self.detection_scores = graph.get_tensor_by_name(
-					"detection_scores:0"
-				)
+                    "detection_scores:0"
+                )
                 self.detection_classes = graph.get_tensor_by_name(
-					"detection_classes:0"
-				)
+                    "detection_classes:0"
+                )
         return graph
