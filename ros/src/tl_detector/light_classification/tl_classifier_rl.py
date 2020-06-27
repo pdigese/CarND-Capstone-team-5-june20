@@ -12,9 +12,7 @@ SSD_GRAPH_FILE = "/../../../nn/frozen_inference_graph.pb"
 
 class TLClassifierRL(object):
     def __init__(self):
-		self.graph = self.load_graph(
-            os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE
-        )
+		self.graph = self.load_graph(os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE)
 
 		self.sess = tf.Session(graph=self.graph)
 
