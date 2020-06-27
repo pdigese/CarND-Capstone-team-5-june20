@@ -11,7 +11,7 @@ import os
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
-class TLClassifier(object):
+class TLClassifierSim(object):
     def __init__(self):
         #TODO load classifier
 
