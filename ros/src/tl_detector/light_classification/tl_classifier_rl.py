@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import os
 
-SSD_GRAPH_FILE = "/../../../nn/frozen_inference_graph.pb"
+SSD_GRAPH_FILE = "/../../../../nn/frozen_inference_graph.pb"
 
 
 class TLClassifierRL(object):
