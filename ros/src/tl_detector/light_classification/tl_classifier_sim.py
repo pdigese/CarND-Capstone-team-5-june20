@@ -21,7 +21,7 @@ class TLClassifierSim(object):
 	self.model = Model_tl()
 
 	self.model.load_weights(os.path.join(DIR,weight_dir,weight))
-        self.graph = tf.get_default_graph()
+    self.graph = tf.get_default_graph()
 	self.state = TrafficLight.UNKNOWN
 
     def get_classification(self, image):
@@ -46,7 +46,7 @@ class TLClassifierSim(object):
 	    conf = output[y_pred] 
 	    rospy.logerr('confidence:%s',conf)
 	    if conf > 0.5:    	    
-		self.state = tl_dict[y_pred]
-		return self.state
+			self.state = tl_dict[y_pred]
+			return self.state
 
         return TrafficLight.UNKNOWN
