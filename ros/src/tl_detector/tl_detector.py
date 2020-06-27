@@ -9,7 +9,6 @@ from cv_bridge import CvBridge
 from light_classification.tl_classifier_sim import TLClassifierSim
 from light_classification.tl_classifier_rl import TLClassifierRL
 import tf
-import cv2
 import yaml
 import math
 
