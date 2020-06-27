@@ -35,17 +35,17 @@ class TLClassifierSim(object):
 
         """
         #TODO implement light color prediction
-	
-		tl_dict = {0:TrafficLight.RED , 1:TrafficLight.YELLOW ,2:TrafficLight.GREEN ,3:TrafficLight.UNKNOWN }
+
+	    tl_dict = {0:TrafficLight.RED, 1:TrafficLight.YELLOW, 2:TrafficLight.GREEN, 3:TrafficLight.UNKNOWN }
 
 		image = cv2.resize(image,(100,100))
 		image = np.array([image])
 		with self.graph.as_default():
 			output = (self.model.predict(image)).squeeze()
 			y_pred = np.argmax(output)
-			conf = output[y_pred] 
+			conf = output[y_pred]
 			rospy.logerr('confidence:%s',conf)
-			if conf > 0.5:    	    
+			if conf > 0.5:
 				self.state = tl_dict[y_pred]
 				return self.state
 
