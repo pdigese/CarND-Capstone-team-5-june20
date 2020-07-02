@@ -5,6 +5,12 @@ import numpy as np
 import os
 import rospy
 from cv_bridge import CvBridge
+from PIL import ImageDraw
+
+from PIL import (
+    Image as Img,
+)  # Must not be named image since there is a datatype called Image from ROS
+
 
 SSD_GRAPH_FILE = "/../../../../nn/frozen_inference_graph.pb"
 
@@ -13,7 +19,7 @@ class TLClassifierRL(object):
     def __init__(self):
         self.graph = self.load_graph(os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE)
         self.sess = tf.Session(graph=self.graph)
-        self.threshold = 0.4
+        self.threshold = 0.6
         self.debug_output_stream = rospy.Publisher('/image_color_debug', Image, queue_size=1)
 
     def get_classification(self, image):
@@ -36,7 +42,9 @@ class TLClassifierRL(object):
         boxes = np.squeeze(detection_boxes)
         classes = np.squeeze(detection_classes).astype(np.int32)
 
-        self.classifier_debug_helper(image, boxes[0], classes[0])
+        classes[0] = self.pix_brightness_cntr(image, scores[0], boxes[0])
+
+        self.classifier_debug_helper(image, boxes[0], classes[0], scores[0])
 
         if scores[0] > self.threshold:
             if classes[0] == 1:
@@ -48,6 +56,10 @@ class TLClassifierRL(object):
             elif classes[0] == 3:
                 rospy.logwarn("YELLOW with confidency : {}".format(scores[0]))
                 return TrafficLight.YELLOW
+
+
+
+
 
         return TrafficLight.UNKNOWN
 
@@ -73,7 +85,7 @@ class TLClassifierRL(object):
                 )
         return graph
 
-    def classifier_debug_helper(self, image, box, cl):
+    def classifier_debug_helper(self, image, box, cl, score):
         """ adds the identified box to the image """
 
         bridge = CvBridge()
@@ -83,8 +95,75 @@ class TLClassifierRL(object):
         a color format. but [rgb8] is. The conversion does not make sense).
         => therefore encoding
         """
+
+        image = self.draw_box(image, box, cl, score, thickness=4)
+
         image_message = bridge.cv2_to_imgmsg(
             image, encoding="rgb8"
-        ) 
+        )
         self.debug_output_stream.publish(image_message)
 
+    def draw_box(self, image, box, class_, score, thickness=4):
+        """Draw bounding boxes on the image"""
+        draw_img = Img.fromarray(image)
+        draw = ImageDraw.Draw(draw_img)
+
+        width, height = draw_img.size
+        bot = box[0] * height
+        left = box[1] * width
+        top = box[2] * height
+        right = box[3] * width
+
+        if score > self.threshold:
+            color = (int(class_)//2*255, int(class_)%2*255, 0)
+            draw.line(
+                [(left, top), (left, bot), (right, bot), (right, top), (left, top)],
+                width=thickness,
+                fill=color,
+            )
+            draw.text((left, top), "{}".format(round(1E4*score)/100))
+        return np.array(draw_img)
+
+
+    def sub_img_debug_helper(self, sub_img):
+        bridge = CvBridge()
+        image_message = bridge.cv2_to_imgmsg(
+            sub_img, encoding="rgb8"
+        )
+        self.debug_output_stream.publish(image_message)
+
+    def pix_brightness_cntr(self, image, score, box):
+        """ alternative light state identifier """
+        class_ = 0
+
+        if score > self.threshold:
+            draw_img = Img.fromarray(image)
+            width, height = draw_img.size
+            bot = int(box[0] * height)
+            left = int(box[1] * width)
+            top = int(box[2] * height)
+            right = int(box[3] * width)
+
+
+            sub_img = image[bot:top, left:right, :]
+            lower_third = int((top - bot) * 1./3.)
+            upper_third = int((top - bot) * 2./3.)
+
+            lower_sub_img_brightness = np.sum(sub_img[:lower_third, :, :])
+            middle_sub_img_brightness = np.sum(sub_img[lower_third:upper_third, :, :])
+            upper_sub_img_brightness = np.sum(sub_img[upper_third:, :, :])
+
+            if (lower_sub_img_brightness > middle_sub_img_brightness) and (lower_sub_img_brightness > upper_sub_img_brightness):
+                rospy.logwarn("RED identified")
+                class_ = 2
+            if (middle_sub_img_brightness > lower_sub_img_brightness) and (middle_sub_img_brightness > upper_sub_img_brightness):
+                rospy.logwarn("YELLOW identified")
+                class_ = 3
+            if (upper_sub_img_brightness > middle_sub_img_brightness) and (upper_sub_img_brightness > lower_sub_img_brightness):
+                rospy.logwarn("GREEN identified")
+                class_ = 1
+        
+            #self.sub_img_debug_helper(sub_img)
+
+        return class_
+            
