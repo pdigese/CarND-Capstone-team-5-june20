@@ -1,8 +1,10 @@
 from styx_msgs.msg import TrafficLight
+from sensor_msgs.msg import Image
 import tensorflow as tf
 import numpy as np
 import os
 import rospy
+from cv_bridge import CvBridge
 
 SSD_GRAPH_FILE = "/../../../../nn/frozen_inference_graph.pb"
 
@@ -10,10 +12,9 @@ SSD_GRAPH_FILE = "/../../../../nn/frozen_inference_graph.pb"
 class TLClassifierRL(object):
     def __init__(self):
         self.graph = self.load_graph(os.path.dirname(os.path.abspath(__file__)) + SSD_GRAPH_FILE)
-
         self.sess = tf.Session(graph=self.graph)
-
-        self.threshold = 0.5
+        self.threshold = 0.4
+        self.debug_output_stream = rospy.Publisher('/image_color_debug', Image, queue_size=1)
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -32,22 +33,20 @@ class TLClassifierRL(object):
                 feed_dict={self.image_tensor: img_expand})
 
         scores = np.squeeze(detection_scores)
+        boxes = np.squeeze(detection_boxes)
         classes = np.squeeze(detection_classes).astype(np.int32)
 
-        # introducing logging msg
-
-        for i, score in enumerate(scores):
-            rospy.logerr("Score: {} - {}".format(i, score))
-
-        for i, class_ in enumerate(classes):
-            rospy.logerr("Class: {} - {}".format(i, class_))
+        self.classifier_debug_helper(image, boxes[0], classes[0])
 
         if scores[0] > self.threshold:
             if classes[0] == 1:
+                rospy.logwarn("GREEN with confidency : {}".format(scores[0]))
                 return TrafficLight.GREEN
             elif classes[0] == 2:
+                rospy.logwarn("RED with confidency : {}".format(scores[0]))
                 return TrafficLight.RED
             elif classes[0] == 3:
+                rospy.logwarn("YELLOW with confidency : {}".format(scores[0]))
                 return TrafficLight.YELLOW
 
         return TrafficLight.UNKNOWN
@@ -73,3 +72,19 @@ class TLClassifierRL(object):
                     "detection_classes:0"
                 )
         return graph
+
+    def classifier_debug_helper(self, image, box, cl):
+        """ adds the identified box to the image """
+
+        bridge = CvBridge()
+        """
+        rqt_image_view reports with pathtrough:
+        ImageView.callback_image() could not convert image from '8UC3' to 'rgb8' ([8UC3] is not
+        a color format. but [rgb8] is. The conversion does not make sense).
+        => therefore encoding
+        """
+        image_message = bridge.cv2_to_imgmsg(
+            image, encoding="rgb8"
+        ) 
+        self.debug_output_stream.publish(image_message)
+
