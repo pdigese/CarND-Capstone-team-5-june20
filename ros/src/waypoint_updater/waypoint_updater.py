@@ -103,7 +103,7 @@ class WaypointUpdater(object):
         self.final_waypoints_pub = rospy.Publisher('/final_waypoints', Lane, queue_size=1)
         
         # spline for the velocity deceleration
-        x = np.array([-0.1, 0., .1, .3333, 1., 1.1])
+        x = np.array([-0.1, 0., .1, .4, 1., 1.1])
         y = np.array([0., 0., .1, .5, 1., 1.])
         self.vel_spline = interpolate.splrep(x, y, s=0)
 
