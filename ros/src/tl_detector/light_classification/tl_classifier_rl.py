@@ -51,13 +51,13 @@ class TLClassifierRL(object):
 
         if scores[0] > self.threshold:
             if classes[0] == 1:
-                rospy.logwarn("GREEN with confidency : {}".format(scores[0]))
+                #rospy.logwarn("GREEN with confidency : {}".format(scores[0]))
                 return TrafficLight.GREEN
             elif classes[0] == 2:
-                rospy.logwarn("RED with confidency : {}".format(scores[0]))
+                #rospy.logwarn("RED with confidency : {}".format(scores[0]))
                 return TrafficLight.RED
             elif classes[0] == 3:
-                rospy.logwarn("YELLOW with confidency : {}".format(scores[0]))
+                #rospy.logwarn("YELLOW with confidency : {}".format(scores[0]))
                 return TrafficLight.YELLOW
 
         return TrafficLight.UNKNOWN
@@ -153,13 +153,13 @@ class TLClassifierRL(object):
             upper_sub_img_brightness = np.sum(sub_img[upper_third:, :, :])
 
             if (lower_sub_img_brightness > middle_sub_img_brightness) and (lower_sub_img_brightness > upper_sub_img_brightness):
-                rospy.logwarn("RED identified")
+                #rospy.logwarn("RED identified")
                 class_ = 2
             if (middle_sub_img_brightness > lower_sub_img_brightness) and (middle_sub_img_brightness > upper_sub_img_brightness):
-                rospy.logwarn("YELLOW identified")
+                #rospy.logwarn("YELLOW identified")
                 class_ = 3
             if (upper_sub_img_brightness > middle_sub_img_brightness) and (upper_sub_img_brightness > lower_sub_img_brightness):
-                rospy.logwarn("GREEN identified")
+                #rospy.logwarn("GREEN identified")
                 class_ = 1
         
             #self.sub_img_debug_helper(sub_img)
