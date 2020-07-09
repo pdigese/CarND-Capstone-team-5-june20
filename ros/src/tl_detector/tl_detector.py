@@ -72,12 +72,11 @@ class TLDetector(object):
     def pose_cb(self, msg):
         self.pose = msg
 
+
     def waypoints_cb(self, lane):
         self.waypoints = lane.waypoints
-        if self.training_bagfile_only == False:
-            self.stop_wp_list = self.get_stop_line_wp(self.stop_line_positions)
-        else:
-            self.stop_wp_list = -1
+        self.stop_wp_list = self.get_stop_line_wp(self.stop_line_positions)
+
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
@@ -90,7 +89,6 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        #rospy.logwarn("image received...")
         self.has_image = True
         self.camera_image = msg
 
@@ -199,7 +197,7 @@ class TLDetector(object):
 
         stop_line_index_list = []
 
-        for i in range(len(stop_line_positions) - 1):
+        for i in range(len(stop_line_positions)):
             stop_line_index = self.get_closest_waypoint(stop_line_positions[i])
             stop_line_index_list.append(stop_line_index)
 
@@ -215,13 +213,19 @@ class TLDetector(object):
 
         """
 
+        #rospy.logwarn("self.pose: {}".format(self.pose))
+        #rospy.logwarn("self.waypoints: {}".format(self.waypoints))
+        #rospy.logwarn("self.stop_wp_list: {}".format(self.stop_wp_list[0]))
+
         if self.training_bagfile_only:
+            '''
+            The training_bagfile_only option allows to launch the tl state detection even though
+            there is no pose available (the current bag files dont have pose data).
+            '''
             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             state = self.get_light_state()
             return -1, state
-
         elif self.pose and self.waypoints and self.stop_wp_list:
-            #        rospy.logerr('loop active')
             car_x = self.pose.pose.position.x
             car_y = self.pose.pose.position.y
             car_wp = self.get_closest_waypoint([car_x, car_y])
@@ -230,7 +234,7 @@ class TLDetector(object):
             closest_light_index = None
             tl_idx = None
 
-            for i in range(len(self.stop_wp_list) - 1):
+            for i in range(len(self.stop_wp_list)):
                 delta_index = self.stop_wp_list[i] - car_wp
 
                 if delta_index < 0:
