@@ -27,7 +27,6 @@ class TLDetector(object):
         self.camera_image = None
         self.lights = []
 
-
         # List of positions that correspond to the line to stop in front of for a given intersection
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
@@ -63,12 +62,10 @@ class TLDetector(object):
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
-
-
-        self.state = TrafficLight.UNKNOWN
-        self.last_state = TrafficLight.UNKNOWN
+        self.latest_tl_state = TrafficLight.UNKNOWN
+        self.debounced_tl_state = TrafficLight.UNKNOWN
+        self.debounce_cntr = 0
         self.last_wp = -1
-        self.state_count = 0
 
         rospy.spin()
 
@@ -104,23 +101,26 @@ class TLDetector(object):
             light_wp, state = self.process_traffic_lights()
 
             '''
-            Publish upcoming red lights at camera frequency.
-            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-            of times till we start using it. Otherwise the previous stable state is
-            used.
+            Debouncer / state holder:
+            - a state has to appear two cycles in a row (= 1 sec) to be accepted as the current state (reduces flickering of TL states).
+              (also applies to leaving the unknown state). EXCEPTION: If red appears, red is being recognized immediately without waiting a cycle.
+            - if there is an unknown state for longer than 6 cycles in a row, then the current state will also go to unknown.
             '''
-            # if self.state != state:
-            #    self.state_count = 0
-            #    self.state = state
-            #    light_wp = -1
-            # elif self.state_count >= STATE_COUNT_THRESHOLD:
-            #    self.last_state = self.state
-            #    light_wp = light_wp if state == TrafficLight.RED else -1
-            #    self.last_wp = light_wp
-            # else:
-            #    light_wp = -1
+            wait_for_unknown = 5
+            wait_for_light_change = 1
 
-            if state != TrafficLight.RED:
+            if self.latest_tl_state == state or state == TrafficLight.RED:
+                self.debounce_cntr += 1
+                if self.debounce_cntr >= wait_for_light_change and state != TrafficLight.UNKNOWN:
+                    self.debounced_tl_state = state
+                elif self.debounce_cntr >= wait_for_unknown and state == TrafficLight.UNKNOWN:
+                    self.debounced_tl_state = TrafficLight.UNKNOWN
+            else:
+                self.debounce_cntr = 0
+
+            self.latest_tl_state = state
+
+            if self.debounced_tl_state != TrafficLight.RED:
                 light_wp = -1
 
             # note: The video says to publish the stopline waypoint, however, the written instruction
@@ -128,14 +128,15 @@ class TLDetector(object):
             # However, the planner is not interested in the index of the traffic line but in the index of the stop line
             # where it is supposed to stop.
             # gerr('published stopline idx: %d',light_wp)
-            if state == TrafficLight.RED:
+            if self.debounced_tl_state == TrafficLight.RED:
                 rospy.logwarn('closest_light_index:%d, RED', light_wp)
-            if state == TrafficLight.YELLOW:
+            if self.debounced_tl_state == TrafficLight.YELLOW:
                 rospy.logwarn('closest_light_index:%d, YELLOW', light_wp)
-            if state == TrafficLight.GREEN:
+            if self.debounced_tl_state == TrafficLight.GREEN:
                 rospy.logwarn('closest_light_index:%d, GREEN', light_wp)
+            if self.debounced_tl_state == TrafficLight.UNKNOWN:
+                rospy.logwarn('Traffic Light State unknown')
             self.upcoming_red_light_pub.publish(Int32(light_wp))
-            #self.state_count += 1
 
     def get_closest_waypoint(self, position):
         """Identifies the closest path waypoint to the given position
@@ -213,17 +214,11 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        #        light = None
-
-        # TODO find the closest visible traffic light (if one exists)
-
-        #        if light:
-        #            state = self.get_light_state(light)
-        #            return light_wp, state
 
         if self.training_bagfile_only:
             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             state = self.get_light_state()
+            return -1, state
 
         elif self.pose and self.waypoints and self.stop_wp_list:
             #        rospy.logerr('loop active')
