@@ -222,7 +222,6 @@ class TLDetector(object):
             The training_bagfile_only option allows to launch the tl state detection even though
             there is no pose available (the current bag files dont have pose data).
             '''
-            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             state = self.get_light_state()
             return -1, state
         elif self.pose and self.waypoints and self.stop_wp_list:
@@ -247,14 +246,8 @@ class TLDetector(object):
                     # rospy.logerr('closest_light_index:%d',closest_light_index)
 
             if closest_light_index:
-                # rospy.logerr('closest_light_index:%d',closest_light_index)
-                cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-                #        cv2.imwrite(("images/{}.jpg".format(float(rospy.get_time()))),cv_image)
-
-                # state = self.get_light_state()
                 state = self.get_light_state()
                 # rospy.logerr('light index:%d  state:%d',closest_light_index, state)
-
                 return closest_light_index, state
 
         return -1, TrafficLight.UNKNOWN
