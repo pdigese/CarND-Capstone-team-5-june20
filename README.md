@@ -3,11 +3,7 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 Full names and Udacity account emails of team members:
 | Names | Emails  |
 | :-----------: |:-------------:| 
-| Heng Mao	| heng.mao.cn@gmail.com |
-| Ruben Meul |	meulruben@gmail.com |
-| Philipp Digeser |	philipp.digeser@gmx.de |
-| Mihajlo Katancevic |	katancevic.mihajlo@gmail.com |
-| Shyam Vekaria |	shyamvekaria95@gmail.com |
+| | |
 
 
 Please use **one** of the two installation options, either native **or** docker installation.
